@@ -1,18 +1,19 @@
 from typing import Optional
 import uuid
 from datetime import datetime, timezone, timedelta
-from sqlmodel import SQLModel, Field, Column, Relationship
+from sqlmodel import SQLModel, Field, Column, Relationship, String
 
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     email: str = Field(default=None, index=True)
-    user_name: str = Field(default=None, index=True)
+    username: str = Field(default=None, index=True)
     last_name: str = Field(default=None)
     first_name: str = Field(default=None)
     company: str | None = Field(default=None)
-    role: str = Field(sa_column=Column(server_default="user"))
+    hashed_password: str = Field(default=None, exclude=True)
+    role: str = Field(sa_column=Column(String(255), server_default="user", nullable=False))
     is_verified: bool = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -26,8 +27,8 @@ class Category(SQLModel, table=True):
     name: str = Field(default=None)
 
     products: list["Product"] = Relationship(back_populates="categories")
-
-
+#
+#
 class Product(SQLModel, table=True):
     __tablename__ = "products"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)

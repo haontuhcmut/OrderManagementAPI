@@ -8,6 +8,8 @@ print(env_path)
 
 class Settings(BaseSettings):
     DATABASE_URL: str
+    JWT_SECRET: str
+    DOMAIN: str
 
     model_config = SettingsConfigDict(env_file=env_path, extra="ignore")
 
