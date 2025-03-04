@@ -6,7 +6,7 @@ from app.config import Config
 from fastapi import HTTPException
 
 
-pwd_context = CryptContext(schemes="bcrypt", deprecate="auto")
+pwd_context = CryptContext(schemes="bcrypt", deprecated="auto")
 
 def get_hashed_password(password):
     return pwd_context.hash(password)
@@ -35,5 +35,6 @@ def decode_url_safe_token(token: str):
             detail="Invalid token",
         )
 
-
+async def send_verification_email(email: str, token: str):
+    veri
 

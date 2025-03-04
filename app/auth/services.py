@@ -23,13 +23,13 @@ class UserService:
         return True if user is not None else False
 
     async def username_exists(self, username, session: AsyncSession):
-        username = await self.get_username(username, session)
-        return True if username is not None else False
+        user = await self.get_username(username, session)
+        return True if user is not None else False
 
     async def create_user(self, user_data: CreateUser, session: AsyncSession):
         hashed_password = get_hashed_password(user_data.password)
         user_dict = user_data.model_dump(exclude="password")
-        new_user = User(user_dict, hashed_password=hashed_password)
+        new_user = User(**user_dict, hashed_password=hashed_password)
         new_user.role = "user"
 
         session.add(new_user)

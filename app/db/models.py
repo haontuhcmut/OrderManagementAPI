@@ -14,7 +14,7 @@ class User(SQLModel, table=True):
     company: str | None = Field(default=None)
     hashed_password: str = Field(default=None, exclude=True)
     role: str = Field(sa_column=Column(String(255), server_default="user", nullable=False))
-    is_verified: bool = Field(default=None)
+    is_verified: bool = Field(default=False)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     results: list["Result"] = Relationship(back_populates="users")
@@ -39,6 +39,7 @@ class Product(SQLModel, table=True):
 
     categories: Category | None = Relationship(back_populates="products")
     results: list["Result"] = Relationship(back_populates="products")
+    purchase: Optional["Purchase"] = Relationship(back_populates="products")
 
 
 class Result(SQLModel, table=True):
