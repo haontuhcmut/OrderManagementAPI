@@ -10,6 +10,9 @@ print(env_path)
 class Settings(BaseSettings):
     DATABASE_URL: str
     JWT_SECRET: str
+    JWT_ALGORITHM: str
+    ACCESS_TOKEN_EXPIRES_MINUTES: int
+    REFRESH_TOKEN_EXPIRES_DAYS: int
     DOMAIN: str
     REDIS_URL: str
     MAIL_USERNAME: str

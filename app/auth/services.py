@@ -2,7 +2,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from app.db.models import User
 from app.auth.schemas import CreateUser
-from app.auth.utils import get_hashed_password
+from app.auth.utils import get_hashed_password, verify_password
 
 
 class UserService:
@@ -35,6 +35,14 @@ class UserService:
         session.add(new_user)
         await session.commit()
         return new_user
+
+    async def authenticate_user(self, email: str, password: str, session: AsyncSession):
+        user = await self.get_email(email, session)
+        if not user:
+            return False
+        if not verify_password(password, user.hashed_password):
+            return False
+        return user
 
     async def update_user(self, user: User, user_data: dict, session: AsyncSession):
         for k, v in user_data.items():
