@@ -9,7 +9,7 @@ class CreateUser(BaseModel):
     company: str
 
 class UserLoginModel(BaseModel):
-    email: str
+    email_or_username: str
     password: str
 
 class Token(BaseModel):

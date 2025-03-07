@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from app.auth.schemas import CreateUser, UserLoginModel, Token
 from app.auth.dependencies import SessionDep, RefreshTokenBearer
 
@@ -26,14 +27,13 @@ oauth_route = APIRouter()
 @oauth_route.post("/signup", status_code=status.HTTP_201_CREATED)
 async def create_user(user_data: CreateUser, session: SessionDep):
     email = user_data.email
-    email_exists = await user_services.email_exists(email, session)
-    if email_exists:
+    username = user_data.username
+    user_exists = await user_services.user_exists(username, email, session)
+    if user_exists == "email_exists":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
         )
-    username = user_data.username
-    username_exist = await user_services.username_exists(username, session)
-    if username_exist:
+    if user_exists == "username_exists":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Username already registered"
         )
@@ -50,14 +50,13 @@ async def create_user(user_data: CreateUser, session: SessionDep):
         "user": new_user,
     }
 
-
 @oauth_route.get("/verify/{token}")
 async def verify_user_account(token: str, session: SessionDep):
     token_data = decode_url_safe_token(token)
     user_email = token_data.get("email")
 
     if user_email:
-        user = await user_services.get_email(user_email, session)
+        user = await user_services.get_user(user_email, session)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
@@ -73,10 +72,10 @@ async def verify_user_account(token: str, session: SessionDep):
     )
 
 
-@oauth_route.post("/login")
-async def user_login(user_data: UserLoginModel, session: SessionDep) -> Token:
+@oauth_route.post("/token")
+async def user_login(user_data: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep) -> Token:
     user = await user_services.authenticate_user(
-        user_data.email, user_data.password, session
+        user_data.username, user_data.password, session
     )
     if not user:
         raise HTTPException(
@@ -84,11 +83,15 @@ async def user_login(user_data: UserLoginModel, session: SessionDep) -> Token:
             detail="Incorrect username or password",
         )
     access_token = create_access_token(
-        data={"email": user_data.email, "sub": str(user.id), "role": user.role},
+        data={
+            "email": user.username,
+            "sub": str(user.id),
+            "role": user.role,
+        },
         expires_delta=timedelta(minutes=Config.ACCESS_TOKEN_EXPIRES_MINUTES),
     )
     refresh_token = create_access_token(
-        {"email": user_data.email, "user_uid": str(user.id)},
+        {"email": user.email, "user_uid": str(user.id)},
         expires_delta=timedelta(days=Config.REFRESH_TOKEN_EXPIRES_DAYS),
         refresh=True,
     )

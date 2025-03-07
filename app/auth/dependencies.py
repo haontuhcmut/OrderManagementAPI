@@ -2,14 +2,13 @@ from typing import Annotated
 from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import Depends, HTTPException, status
 from app.db.session import get_session
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer
 from app.db.redis import token_in_blocklist
 from app.auth.utils import decode_token
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
 
 class TokenBear:
     def __init__(self):
