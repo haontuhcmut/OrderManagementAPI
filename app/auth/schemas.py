@@ -16,3 +16,11 @@ class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
+
+class ForgotPasswordModel(BaseModel):
+    email: str
+
+class PasswordResetConfirmModel(BaseModel):
+    new_password: str
+    confirm_new_password: str
+
