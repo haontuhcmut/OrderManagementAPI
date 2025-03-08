@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from app.db.redis import token_in_blocklist
 from app.auth.utils import decode_token
 
+
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
