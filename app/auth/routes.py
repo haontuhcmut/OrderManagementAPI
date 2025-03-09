@@ -33,15 +33,16 @@ oauth_route = APIRouter()
 @oauth_route.post("/signup", status_code=status.HTTP_201_CREATED)
 async def create_user(user_data: CreateUser, session: SessionDep):
     email = user_data.email
-    username = user_data.username
-    user_exists = await user_services.user_exists(username, email, session)
-    if user_exists == "email_exists":
+    email_exists = await user_services.user_exists(email, session)
+    if email_exists == "email_exists":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
         )
-    if user_exists == "username_exists":
+    username = user_data.username
+    username_exists = await user_services.user_exists(username, session)
+    if username_exists == "username_exists":
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Username already registered"
+            status_code=status.HTTP_409_CONFLICT, detail="Username already registered. Please choose another username."
         )
     new_user = await user_services.create_user(user_data, session)
     token = encode_url_safe_token({"email": email})
@@ -52,7 +53,7 @@ async def create_user(user_data: CreateUser, session: SessionDep):
     subject = "Verify your email"
     send_email.delay(emails, subject, html_content)
     return {
-        "message": "Account created! Check email to verify your account",
+        "message": "Account created! Check email to verify your account. You have 1 hour to verify, otherwise your account will be deleted.",
         "user": new_user,
     }
 
@@ -137,10 +138,10 @@ async def password_reset_request(email_data: ForgotPasswordModel, session: Sessi
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Error user not found"
         )
-    token = create_access_token({"email": email})
+    token = encode_url_safe_token({"email": email})
     link = f"http:{Config.DOMAIN}/password-reset-confirm/{token}"
     template = env.get_template("password-reset.html")
-    html_content = template.render(url_act=link)
+    html_content = template.render(action_url=link)
     subject = "Forgot your password"
     send_email.delay([email], subject, html_content)
     return JSONResponse(
@@ -151,7 +152,7 @@ async def password_reset_request(email_data: ForgotPasswordModel, session: Sessi
     )
 
 
-@oauth_route.get("/password-reset-confirm/{token}")
+@oauth_route.post("/password-reset-confirm/{token}")
 async def valid_reset_password(
     token: str, password: PasswordResetConfirmModel, session: SessionDep
 ):
@@ -182,3 +183,4 @@ async def valid_reset_password(
         content="Error occurred during password reset",
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
+
