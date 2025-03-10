@@ -7,7 +7,7 @@ from app.auth.schemas import (
     ForgotPasswordModel,
     PasswordResetConfirmModel,
 )
-from app.auth.dependencies import SessionDep, RefreshTokenBearer
+from app.auth.dependencies import SessionDep, RefreshTokenBearer, AccessTokenBearer, oauth2_scheme
 
 from app.celery_tasks import send_email
 from app.auth.services import UserService
@@ -183,4 +183,9 @@ async def valid_reset_password(
         content="Error occurred during password reset",
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
+
+# @oauth_route.get("/user")
+# async def get_user(token: Annotated[str, Depends(oauth2_scheme)], session: SessionDep):
+#
+
 

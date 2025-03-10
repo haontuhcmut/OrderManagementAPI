@@ -14,7 +14,7 @@ AsyncSessionLocal = sessionmaker(
     expire_on_commit=False, # ⚠️ Objects will NOT be automatically refreshed after commit!
 )
 """
-⚠️ Important Note:
+Important Note:
 - `expire_on_commit=False` means objects **retain their state** after commit.
 - This prevents automatic expiration, avoiding additional queries.
 - Use `session.refresh(object)` if you need updated values from the database.
@@ -28,6 +28,8 @@ async def create_db_and_tables():
 async def create_event():
     """
     Create a MYSQL event to delete unverified users every 5 minutes.
+    Important Note:
+    You need either the SUPER or SYSTEM_VARIABLES_ADMIN privilege in database.
     """
     async with engine.begin() as conn:
         await conn.run_sync(lambda sync_conn: sync_conn.execute(text("""SET GLOBAL event_scheduler = ON;""")))
@@ -42,7 +44,7 @@ async def create_event():
             LIMIT 100;
         """))
         await conn.commit()
-        print("✅ Event 'delete_unverified_users' has been created!")
+        print("Event 'delete_unverified_users' has been created!")
 
 
 async def get_session() -> AsyncSession:

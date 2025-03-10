@@ -1,13 +1,16 @@
-from typing import Annotated
+from typing import Annotated, Any
 from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import Depends, HTTPException, status
 from app.db.session import get_session
 from fastapi.security import OAuth2PasswordBearer
 from app.db.redis import token_in_blocklist
 from app.auth.utils import decode_token
+from app.auth.services import UserService
+from app.db.models import User
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+user_services = UserService()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -43,3 +46,25 @@ class RefreshTokenBearer(TokenBear):
         if token_data and not token_data["refresh"]:
            raise self.credentials_exception
 
+
+async def get_current_user(
+    token_details: Annotated[dict, Depends(AccessTokenBearer())],
+    session: SessionDep
+):
+    user_email = token_details.get("email")
+    user = await user_services.get_user(user_email, session)
+    return user
+
+class RoleChecker:
+    def __init__(self, allowed_roles: list[str]) -> None:
+        self.allowed_roles = allowed_roles
+        self.credentials_exception = HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    def __call__(self, current_user: Annotated[User, Depends(get_current_user)]) -> Any:
+        if not current_user.is_verified:
+            raise self.credentials_exception
+        if current_user.role in self.allowed_roles:
+            return True
