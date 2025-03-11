@@ -27,7 +27,7 @@ class Category(SQLModel, table=True):
     name: str = Field(default=None)
 
     products: list["Product"] = Relationship(back_populates="categories")
-#
+
 #
 class Product(SQLModel, table=True):
     __tablename__ = "products"

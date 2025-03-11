@@ -1,7 +1,7 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select, or_
+from sqlmodel import select, or_, text
 from app.db.models import User
-from app.auth.schemas import CreateUser
+from app.auth.schemas import CreateUser, AdminCreateModel
 from app.auth.utils import get_hashed_password, verify_password
 
 
@@ -12,31 +12,15 @@ class UserService:
         user = result.one_or_none()
         return user
 
-    async def user_exists(self, username, email, session: AsyncSession):
-        statement = select(User).where(or_(User.username == username, User.email == email))
-        results = await session.exec(statement)
-        existing_user = results.first()
-        if existing_user.email == email:
-            return "email_exists"
-        if existing_user.username == username:
-            return "username_exists"
+    async def user_exists(self, username_or_email, session: AsyncSession):
+        user = await self.get_user(username_or_email, session)
+        if user:
+            if user.email == username_or_email:
+                return "email_exists"
+            if user.username == username_or_email:
+                return "username_exists"
         return False
 
-
-
-    async def get_username(self, username, session: AsyncSession):
-        statement = select(User).where(User.username == username)
-        results = await session.exec(statement)
-        user = results.first()
-        return user
-
-    async def email_exists(self, email, session: AsyncSession):
-        user = await self.get_user(email, session)
-        return True if user is not None else False
-
-    async def username_exists(self, username, session: AsyncSession):
-        user = await self.get_username(username, session)
-        return True if user is not None else False
 
     async def create_user(self, user_data: CreateUser, session: AsyncSession):
         hashed_password = get_hashed_password(user_data.password)
@@ -47,6 +31,7 @@ class UserService:
         session.add(new_user)
         await session.commit()
         return new_user
+
 
     async def authenticate_user(self, login_input: str, password: str, session: AsyncSession):
         user = await self.get_user(login_input, session)
@@ -62,3 +47,17 @@ class UserService:
         session.add(user)
         await session.commit()
         return user
+
+class AdminService(UserService):
+    async def create_admin(self, admin_data: AdminCreateModel, session: AsyncSession):
+        get_admin_email = await self.get_user(admin_data.email, session)
+        if get_admin_email is not None:
+            return "Root admin already exists. Skipping creation."
+        get_admin_username = await self.get_user(admin_data.username, session)
+        if get_admin_username is not None:
+            return "Root admin already exists. Skipping creation."
+        hashed_password = get_hashed_password(admin_data.password)
+        admin_data_dict = admin_data.model_dump(exclude={"password"})
+        new_admin = User(**admin_data_dict, hashed_password=hashed_password)
+        session.add(new_admin)
+        await session.commit()
