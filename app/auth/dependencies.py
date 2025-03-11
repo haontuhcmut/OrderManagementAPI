@@ -1,8 +1,8 @@
 from typing import Annotated
 from sqlmodel.ext.asyncio.session import AsyncSession
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from app.db.session import get_session
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, HTTPAuthorizationCredentials, HTTPBearer
 from app.db.redis import token_in_blocklist
 from app.auth.utils import decode_token
 
