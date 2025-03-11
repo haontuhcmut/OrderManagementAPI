@@ -10,6 +10,7 @@ from app.auth.schemas import (
 from app.auth.dependencies import (
     SessionDep,
     RefreshTokenBearer,
+    AccessTokenBearer,
     get_current_user,
     RoleChecker,
 )
@@ -23,6 +24,7 @@ from app.auth.utils import (
     get_hashed_password,
 )
 from app.config import Config
+from app.db.redis import add_sub_to_blocklist
 
 from typing import Annotated
 from datetime import timedelta, datetime, timezone
@@ -125,6 +127,14 @@ async def get_current_user(
     _: bool = Depends(role_checker),
 ):
     return user
+
+@oauth_route.get("/logout")
+async def revoke_token(token_details: Annotated[dict, Depends(AccessTokenBearer())]):
+    sub = token_details.get("sub")
+    await add_sub_to_blocklist(sub)
+    return JSONResponse(
+        content={"message": "Logged out successfully"}, status_code=status.HTTP_200_OK
+    )
 
 
 @oauth_route.get("/refresh_token")

@@ -26,18 +26,18 @@ class Category(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(default=None)
 
-    products: list["Product"] = Relationship(back_populates="categories")
+    products: list["Product"] = Relationship(back_populates="category")
 
 #
 class Product(SQLModel, table=True):
     __tablename__ = "products"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    name: str = Field(default=None, index=True, foreign_key="categories.id")
-    category_id: str = Field(default=None)
+    name: str = Field(default=None, index=True)
+    category_id: uuid.UUID = Field(default=None, foreign_key="categories.id")
     price: float = Field(default=None)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    categories: Category | None = Relationship(back_populates="products")
+    category: Category | None = Relationship(back_populates="products")
     results: list["Result"] = Relationship(back_populates="products")
     purchase: Optional["Purchase"] = Relationship(back_populates="products")
 

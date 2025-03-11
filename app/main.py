@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.auth.routes import oauth_route
 from app.product.routes import product_route
-from app.db.session import create_event, create_db_and_tables, engine, AsyncSessionLocal
+from app.categories.routes import categories_routes
+from app.db.session import create_event, engine, AsyncSessionLocal
 from app.auth.schemas import AdminCreateModel
 from app.auth.services import AdminService
 
@@ -12,7 +13,6 @@ admin_service = AdminService()
 async def lifespan(app: FastAPI):
     print("Connecting to MySQL and setting up event...")
     async with engine.begin() as conn:
-        await create_db_and_tables()
         await create_event()
     async with AsyncSessionLocal() as session:
         admin_data = AdminCreateModel()
@@ -26,3 +26,5 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(oauth_route, tags=["oauth"])
 app.include_router(product_route, tags=["product"])
+app.include_router(categories_routes, tags=["category"])
+
