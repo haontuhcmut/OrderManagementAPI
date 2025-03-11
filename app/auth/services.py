@@ -1,7 +1,7 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, or_, text
 from app.db.models import User
-from app.auth.schemas import CreateUser
+from app.auth.schemas import CreateUser, AdminCreateModel
 from app.auth.utils import get_hashed_password, verify_password
 
 
@@ -47,3 +47,17 @@ class UserService:
         session.add(user)
         await session.commit()
         return user
+
+class AdminService(UserService):
+    async def create_admin(self, admin_data: AdminCreateModel, session: AsyncSession):
+        get_admin_email = await self.get_user(admin_data.email, session)
+        if get_admin_email is not None:
+            return "Root admin already exists. Skipping creation."
+        get_admin_username = await self.get_user(admin_data.username, session)
+        if get_admin_username is not None:
+            return "Root admin already exists. Skipping creation."
+        hashed_password = get_hashed_password(admin_data.password)
+        admin_data_dict = admin_data.model_dump(exclude={"password"})
+        new_admin = User(**admin_data_dict, hashed_password=hashed_password)
+        session.add(new_admin)
+        await session.commit()

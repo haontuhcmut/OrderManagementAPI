@@ -8,10 +8,6 @@ class CreateUser(BaseModel):
     password: str
     company: str
 
-class UserLoginModel(BaseModel):
-    email_or_username: str
-    password: str
-
 class Token(BaseModel):
     access_token: str
     refresh_token: str
@@ -23,4 +19,15 @@ class ForgotPasswordModel(BaseModel):
 class PasswordResetConfirmModel(BaseModel):
     new_password: str
     confirm_new_password: str
+
+class AdminCreateModel(BaseModel):
+    email: str = "root@root.com"
+    last_name: str = "root"
+    first_name: str = "root"
+    username: str = "root"
+    password: str = "root123"
+    is_verified: bool = True
+    role: str = "admin"
+
+
 

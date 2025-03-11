@@ -14,6 +14,7 @@ user_services = UserService()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+
 class TokenBear:
     def __init__(self):
         self.credentials_exception = HTTPException(
@@ -21,6 +22,7 @@ class TokenBear:
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
     async def __call__(self, token: Annotated[str, Depends(oauth2_scheme)]):
         token_data = decode_token(token)
 
@@ -36,35 +38,39 @@ class TokenBear:
     def verify_token_data(self, token_data):
         raise NotImplementedError("Please override this method in child classes")
 
+
 class AccessTokenBearer(TokenBear):
     def verify_token_data(self, token_data: dict) -> None:
         if token_data and token_data["refresh"]:
             raise self.credentials_exception
 
+
 class RefreshTokenBearer(TokenBear):
     def verify_token_data(self, token_data: dict) -> None:
         if token_data and not token_data["refresh"]:
-           raise self.credentials_exception
+            raise self.credentials_exception
 
 
 async def get_current_user(
-    token_details: Annotated[dict, Depends(AccessTokenBearer())],
-    session: SessionDep
+    token_details: Annotated[dict, Depends(AccessTokenBearer())], session: SessionDep
 ):
     user_email = token_details.get("email")
     user = await user_services.get_user(user_email, session)
     return user
 
+
 class RoleChecker:
     def __init__(self, allowed_roles: list[str]) -> None:
         self.allowed_roles = allowed_roles
-        self.credentials_exception = HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+
     def __call__(self, current_user: Annotated[User, Depends(get_current_user)]) -> Any:
         if not current_user.is_verified:
-            raise self.credentials_exception
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
+            )
         if current_user.role in self.allowed_roles:
             return True
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="You don't have enough permission to perform this action",
+        )

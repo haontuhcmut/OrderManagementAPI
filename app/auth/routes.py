@@ -7,7 +7,12 @@ from app.auth.schemas import (
     ForgotPasswordModel,
     PasswordResetConfirmModel,
 )
-from app.auth.dependencies import SessionDep, RefreshTokenBearer, AccessTokenBearer, oauth2_scheme
+from app.auth.dependencies import (
+    SessionDep,
+    RefreshTokenBearer,
+    get_current_user,
+    RoleChecker,
+)
 
 from app.celery_tasks import send_email
 from app.auth.services import UserService
@@ -26,7 +31,10 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 env = Environment(loader=FileSystemLoader(BASE_DIR.parent.parent / "templates"))
+
+role_checker = RoleChecker(["user", "admin"])
 user_services = UserService()
+
 oauth_route = APIRouter()
 
 
@@ -42,7 +50,8 @@ async def create_user(user_data: CreateUser, session: SessionDep):
     username_exists = await user_services.user_exists(username, session)
     if username_exists == "username_exists":
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Username already registered. Please choose another username."
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Username already registered. Please choose another username.",
         )
     new_user = await user_services.create_user(user_data, session)
     token = encode_url_safe_token({"email": email})
@@ -108,6 +117,14 @@ async def user_login(
     return Token(
         access_token=access_token, refresh_token=refresh_token, token_type="bearer"
     )
+
+
+@oauth_route.get("/me")
+async def get_current_user(
+    user=Depends(get_current_user),
+    _: bool = Depends(role_checker),
+):
+    return user
 
 
 @oauth_route.get("/refresh_token")
@@ -183,9 +200,3 @@ async def valid_reset_password(
         content="Error occurred during password reset",
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
-
-# @oauth_route.get("/user")
-# async def get_user(token: Annotated[str, Depends(oauth2_scheme)], session: SessionDep):
-#
-
-
