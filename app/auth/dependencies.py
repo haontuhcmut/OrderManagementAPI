@@ -12,7 +12,7 @@ from app.db.models import User
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 user_services = UserService()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token") #Note: tokenUrl support to get token
 
 
 class TokenBear:
