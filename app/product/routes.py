@@ -12,9 +12,8 @@ admin_role_checker = Depends(RoleChecker(["admin"]))
 
 product_route = APIRouter()
 
-
 @product_route.post(
-    "/",
+    "/product",
     status_code=status.HTTP_201_CREATED,
     response_model=Product,
     dependencies=[admin_role_checker],

@@ -61,3 +61,14 @@ class AdminService(UserService):
         new_admin = User(**admin_data_dict, hashed_password=hashed_password)
         session.add(new_admin)
         await session.commit()
+
+    async def delete_user_account(self, user: str, session: AsyncSession):
+        user_to_delete = await self.get_user(user, session)
+
+        if user_to_delete is not None:
+            await session.delete(user_to_delete)
+            await session.commit()
+
+            return user_to_delete
+        else:
+            return None

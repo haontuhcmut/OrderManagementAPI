@@ -24,7 +24,7 @@ class User(SQLModel, table=True):
 class Category(SQLModel, table=True):
     __tablename__ = "categories"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    name: str = Field(default=None)
+    name: str = Field(default=None, nullable=False, unique=True)
 
     products: list["Product"] = Relationship(back_populates="category")
 

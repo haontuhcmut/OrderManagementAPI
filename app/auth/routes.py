@@ -16,7 +16,7 @@ from app.auth.dependencies import (
 )
 
 from app.celery_tasks import send_email
-from app.auth.services import UserService
+from app.auth.services import UserService, AdminService
 from app.auth.utils import (
     encode_url_safe_token,
     decode_url_safe_token,
@@ -35,7 +35,9 @@ BASE_DIR = Path(__file__).resolve().parent
 env = Environment(loader=FileSystemLoader(BASE_DIR.parent.parent / "templates"))
 
 role_checker = RoleChecker(["user", "admin"])
+admin_role_checker = Depends(RoleChecker(["admin"]))
 user_services = UserService()
+admin_services = AdminService()
 
 oauth_route = APIRouter()
 
@@ -59,7 +61,7 @@ async def create_user(user_data: CreateUser, session: SessionDep):
     token = encode_url_safe_token({"email": email})
     link = f"http://{Config.DOMAIN}/verify/{token}"
     template = env.get_template("verify-email.html")
-    html_content = template.render(action_url=link)
+    html_content = template.render(action_url=link, first_name=user_data.first_name)
     emails = [email]
     subject = "Verify your email"
     send_email.delay(emails, subject, html_content)
@@ -168,7 +170,7 @@ async def password_reset_request(email_data: ForgotPasswordModel, session: Sessi
     token = encode_url_safe_token({"email": email})
     link = f"http:{Config.DOMAIN}/password-reset-confirm/{token}"
     template = env.get_template("password-reset.html")
-    html_content = template.render(action_url=link)
+    html_content = template.render(action_url=link, first_name=user.first_name)
     subject = "Forgot your password"
     send_email.delay([email], subject, html_content)
     return JSONResponse(
@@ -210,3 +212,10 @@ async def valid_reset_password(
         content="Error occurred during password reset",
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
+
+@oauth_route.delete("/delete_user/{username_or_email}", dependencies=[admin_role_checker])
+async def delete_user(username_or_email: str, _: Annotated[dict, Depends(AccessTokenBearer)], session: SessionDep):
+    user_to_delete = await admin_services.delete_user_account(username_or_email, session)
+    return {"message": "User is deleted",
+            "user": user_to_delete
+            }
