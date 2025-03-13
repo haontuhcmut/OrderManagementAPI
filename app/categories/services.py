@@ -19,15 +19,16 @@ class CategoryServices:
 
         return category
 
-    async def read_categories(self, session: AsyncSession):
+    async def get_categories(self, session: AsyncSession):
         statement = select(Category).order_by(desc(Category.name))
         results = await session.exec(statement)
         categories = results.all()
 
         return categories
 
-    async def update_category(self, name: str, update_data: CategoryCreateModel,  session: AsyncSession):
-        category_to_update = await self.category_item(name, session)
+    async def update_category(self, category_name: str, update_data: CategoryCreateModel, session: AsyncSession):
+        category_to_update = await self.category_item(category_name, session)
+
         if category_to_update is not None:
             update_data_dict = update_data.model_dump()
 
@@ -35,9 +36,7 @@ class CategoryServices:
                 setattr(category_to_update, k, v)
 
             await session.commit()
-
             return category_to_update
         else:
             return None
-
 
