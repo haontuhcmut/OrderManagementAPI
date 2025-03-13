@@ -1,12 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import uuid
 from datetime import date
 
 class ProductCreateModel(BaseModel):
-    user_id: uuid.UUID
-    product_id: uuid.UUID
-    quantity: int
-    amount: float
-    vat: float
-    total: float
+    name: str = Field(max_length=32)
+    category_id: uuid.UUID
+    price: float = Field(default=0, ge=0)
     created_at: date
+

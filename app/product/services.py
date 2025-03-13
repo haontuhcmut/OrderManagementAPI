@@ -10,6 +10,13 @@ class ProductServices:
         products = results.all()
         return products
 
+    async def get_product_item(self, product_item: str, session: AsyncSession):
+        statement = select(Product).where(Product.name == product_item)
+        result = await session.exec(statement)
+        product = result.first()
+        return product
+
+
     async def create_product(self, product_data: ProductCreateModel, session: AsyncSession):
         product_data_dict = product_data.model_dump()
         new_product = Product(**product_data_dict)

@@ -41,10 +41,11 @@ class ProductLinkPurchase(SQLModel, table=True):
 class Product(SQLModel, table=True):
     __tablename__ = "products"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    name: str = Field(default=None, index=True)
+    name: str = Field(default=None, unique=True)
     category_id: uuid.UUID | None = Field(default=None, foreign_key="categories.id")
+
     price: float = Field(default=None)
-    created_at: date = Field(default="1999-09-09")
+    created_at: date
 
     category: Category | None = Relationship(back_populates="products")
     results: list["Result"] = Relationship(back_populates="product")
