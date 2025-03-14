@@ -22,7 +22,7 @@ class User(SQLModel, table=True):
     categories: list["Category"] = Relationship(back_populates="user")
     results: list["Result"] = Relationship(back_populates="user")
     purchase: list["Purchase"] = Relationship(back_populates="user")
-
+    products: list["Product"] = Relationship(back_populates="user")
 
 class Category(SQLModel, table=True):
     __tablename__ = "categories"
@@ -45,15 +45,17 @@ class ProductLinkPurchase(SQLModel, table=True):
 class Product(SQLModel, table=True):
     __tablename__ = "products"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    name: str = Field(default=None, unique=True)
+    name: str = Field(default=None, unique=True, )
     category_id: uuid.UUID | None = Field(default=None, foreign_key="categories.id")
     price: float = Field(default=None)
+    description: str = Field(default=None, max_length=1024)
     created_at: date
+    user_id: uuid.UUID | None = Field(default=None, foreign_key="users.id")
 
     category: Category | None = Relationship(back_populates="products")
     results: list["Result"] = Relationship(back_populates="product")
     purchase_ids: list["Purchase"] = Relationship(back_populates="product_ids", link_model=ProductLinkPurchase)
-
+    user: User | None = Relationship(back_populates="products")
 
 
 class Purchase(SQLModel, table=True):

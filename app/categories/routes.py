@@ -24,7 +24,9 @@ async def create_category(
     session: SessionDep,
 ) -> dict:
     user_id = token_data.get("user_id")
-    new_category = await category_services.create_category(category_data, user_id, session)
+    new_category = await category_services.create_category(
+        category_data, user_id, session
+    )
     return new_category
 
 
@@ -36,13 +38,19 @@ async def get_all_categories(
     return categories
 
 
-@categories_route.get("/{category_id}", response_model=Category, dependencies=[role_checker])
+@categories_route.get(
+    "/{category_id}", response_model=Category, dependencies=[role_checker]
+)
 async def get_category_item(
     category_id: str,
     session: SessionDep,
     _: Annotated[dict, Depends(access_token_bearer)],
 ):
     category = await category_services.category_item(category_id, session)
+    if category is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
+        )
     return category
 
 
@@ -66,16 +74,25 @@ async def update_category(
     else:
         return updated_category
 
-@categories_route.delete("/category-delete/{category_id}", response_model=Category, dependencies=[admin_role_checker])
-async def delete_category(category_id: str, session: SessionDep, _: Annotated[dict, Depends(access_token_bearer)]):
+
+@categories_route.delete(
+    "/category-delete/{category_id}",
+    response_model=Category,
+    dependencies=[admin_role_checker],
+)
+async def delete_category(
+    category_id: str,
+    session: SessionDep,
+    _: Annotated[dict, Depends(access_token_bearer)],
+):
     category_to_delete = await category_services.delete_category(category_id, session)
     if category_to_delete is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
+        )
     return JSONResponse(
         content={
             "message": f"Category with the name {category_to_delete.name} is deleted"
         },
-        status_code=status.HTTP_200_OK
+        status_code=status.HTTP_200_OK,
     )
-
-
