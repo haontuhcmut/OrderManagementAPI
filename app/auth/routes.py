@@ -34,6 +34,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 env = Environment(loader=FileSystemLoader(BASE_DIR.parent.parent / "templates"))
 
+access_token_bearer = AccessTokenBearer()
 role_checker = RoleChecker(["user", "admin"])
 admin_role_checker = Depends(RoleChecker(["admin"]))
 user_services = UserService()
@@ -108,13 +109,13 @@ async def user_login(
     access_token = create_access_token(
         data={
             "email": user.username,
-            "sub": str(user.id),
+            "user_id": str(user.id),
             "role": user.role,
         },
         expires_delta=timedelta(minutes=Config.ACCESS_TOKEN_EXPIRES_MINUTES),
     )
     refresh_token = create_access_token(
-        {"email": user.email, "user_uid": str(user.id)},
+        {"email": user.email, "user_id": str(user.id)},
         expires_delta=timedelta(days=Config.REFRESH_TOKEN_EXPIRES_DAYS),
         refresh=True,
     )
@@ -130,8 +131,9 @@ async def get_current_user(
 ):
     return user
 
+
 @oauth_route.get("/logout")
-async def revoke_token(token_details: Annotated[dict, Depends(AccessTokenBearer())]):
+async def revoke_token(token_details: Annotated[dict, Depends(access_token_bearer)]):
     sub = token_details.get("sub")
     await add_sub_to_blocklist(sub)
     return JSONResponse(
@@ -213,9 +215,37 @@ async def valid_reset_password(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
 
-@oauth_route.delete("/delete_user/{username_or_email}", dependencies=[admin_role_checker])
-async def delete_user(username_or_email: str, _: Annotated[dict, Depends(AccessTokenBearer)], session: SessionDep):
-    user_to_delete = await admin_services.delete_user_account(username_or_email, session)
-    return {"message": "User is deleted",
-            "user": user_to_delete
-            }
+
+@oauth_route.patch(
+    "/upgrade_to_admin/{username_or_email}", dependencies=[admin_role_checker]
+)
+async def upgrade_user(
+    username_or_email: str,
+    session: SessionDep,
+    _: Annotated[dict, Depends(access_token_bearer)],
+):
+    user = await admin_services.get_user(username_or_email, session)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Error user not found"
+        )
+    else:
+        await admin_services.update_user(user, {"role": "admin"}, session)
+        return JSONResponse(
+            content={"message": "User upgraded successfully"},
+            status_code=status.HTTP_200_OK,
+        )
+
+
+@oauth_route.delete(
+    "/delete_user/{username_or_email}", dependencies=[admin_role_checker]
+)
+async def delete_user(
+    username_or_email: str,
+    _: Annotated[dict, Depends(access_token_bearer)],
+    session: SessionDep,
+):
+    user_to_delete = await admin_services.delete_user_account(
+        username_or_email, session
+    )
+    return {"message": "User is deleted", "user": user_to_delete}

@@ -9,7 +9,7 @@ class UserService:
     async def get_user(self, user, session: AsyncSession):
         statement = select(User).where(or_(User.email == user, User.username == user))
         result = await session.exec(statement)
-        user = result.one_or_none()
+        user = result.first()
         return user
 
     async def user_exists(self, username_or_email, session: AsyncSession):
@@ -61,6 +61,7 @@ class AdminService(UserService):
         new_admin = User(**admin_data_dict, hashed_password=hashed_password)
         session.add(new_admin)
         await session.commit()
+
 
     async def delete_user_account(self, user: str, session: AsyncSession):
         user_to_delete = await self.get_user(user, session)

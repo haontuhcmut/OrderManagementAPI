@@ -6,8 +6,8 @@ from typing import Optional
 class User(SQLModel, table=True):
     __tablename__ = "users"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    email: str = Field(default=None, index=True)
-    username: str = Field(default=None, index=True)
+    email: str = Field(default=None, index=True, unique=True)
+    username: str = Field(default=None, index=True, unique=True)
     last_name: str = Field(default=None)
     first_name: str = Field(default=None)
     company: str | None = Field(default=None)
@@ -18,6 +18,8 @@ class User(SQLModel, table=True):
     is_verified: bool = Field(default=False)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+    # Relationship
+    categories: list["Category"] = Relationship(back_populates="user")
     results: list["Result"] = Relationship(back_populates="user")
     purchase: list["Purchase"] = Relationship(back_populates="user")
 
@@ -25,8 +27,10 @@ class User(SQLModel, table=True):
 class Category(SQLModel, table=True):
     __tablename__ = "categories"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    name: str = Field(default=None, nullable=False, unique=True)
+    name: str = Field(..., nullable=False, unique=True)
+    user_id: uuid.UUID | None = Field(default=None, foreign_key="users.id")
 
+    user: User | None = Relationship(back_populates="categories")
     products: list["Product"] = Relationship(back_populates="category")
 
 
@@ -43,7 +47,6 @@ class Product(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(default=None, unique=True)
     category_id: uuid.UUID | None = Field(default=None, foreign_key="categories.id")
-
     price: float = Field(default=None)
     created_at: date
 

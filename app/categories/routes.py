@@ -1,5 +1,8 @@
+import uuid
+
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 
 from app.categories.schemas import CategoryCreateModel
 from app.auth.dependencies import RoleChecker, AccessTokenBearer, SessionDep
@@ -14,13 +17,14 @@ category_services = CategoryServices()
 categories_route = APIRouter()
 
 
-@categories_route.post("/", dependencies=[admin_role_checker])
+@categories_route.post("/", response_model=Category, dependencies=[admin_role_checker])
 async def create_category(
     category_data: CategoryCreateModel,
-    _: Annotated[dict, Depends(access_token_bearer)],
+    token_data: Annotated[dict, Depends(access_token_bearer)],
     session: SessionDep,
-):
-    new_category = await category_services.create_category(category_data, session)
+) -> dict:
+    user_id = token_data.get("user_id")
+    new_category = await category_services.create_category(category_data, user_id, session)
     return new_category
 
 
@@ -32,27 +36,27 @@ async def get_all_categories(
     return categories
 
 
-@categories_route.get("/{category_name}")
+@categories_route.get("/{category_id}", response_model=Category, dependencies=[role_checker])
 async def get_category_item(
-    category_name: str,
+    category_id: str,
     session: SessionDep,
     _: Annotated[dict, Depends(access_token_bearer)],
 ):
-    category = await category_services.category_item(category_name, session)
+    category = await category_services.category_item(category_id, session)
     return category
 
 
-@categories_route.patch(
-    "/{category_name}", response_model=Category, dependencies=[admin_role_checker]
+@categories_route.put(
+    "/{category_id}", response_model=Category, dependencies=[admin_role_checker]
 )
 async def update_category(
-    category_name: str,
-    category_to_update: CategoryCreateModel,
+    category_id: str,
+    category_data: CategoryCreateModel,
     _: Annotated[dict, Depends(access_token_bearer)],
     session: SessionDep,
 ):
     updated_category = await category_services.update_category(
-        category_name=category_name, update_data=category_to_update, session=session
+        category_id, category_data, session
     )
 
     if updated_category is None:
@@ -61,3 +65,17 @@ async def update_category(
         )
     else:
         return updated_category
+
+@categories_route.delete("/category-delete/{category_id}", response_model=Category, dependencies=[admin_role_checker])
+async def delete_category(category_id: str, session: SessionDep, _: Annotated[dict, Depends(access_token_bearer)]):
+    category_to_delete = await category_services.delete_category(category_id, session)
+    if category_to_delete is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+    return JSONResponse(
+        content={
+            "message": f"Category with the name {category_to_delete.name} is deleted"
+        },
+        status_code=status.HTTP_200_OK
+    )
+
+

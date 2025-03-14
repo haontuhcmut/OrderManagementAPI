@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     MAIL_PASSWORD: str
     MAIL_FROM: str
     MAIL_SERVER: str
+    EMAIL_AD: str
+    USERNAME_AD: str
+    PASSWORD_AD: str
 
     model_config = SettingsConfigDict(env_file=env_path, extra="ignore")
 
@@ -29,6 +32,6 @@ Config = Settings()
 #Celery config
 broker_url = Config.REDIS_URL
 result_backend = Config.REDIS_URL
-broker_connection_retry_on_startup=True
+broker_connection_retry_on_startup = True
 
     
