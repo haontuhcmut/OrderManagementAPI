@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
+
 from app.db.models import Product
 from app.auth.dependencies import SessionDep, RoleChecker, AccessTokenBearer
 from typing import Annotated
@@ -47,3 +49,4 @@ async def create_product(
     user_id = token_data.get("user_id")
     new_product = await product_services.create_product(product_data, user_id, session)
     return new_product
+

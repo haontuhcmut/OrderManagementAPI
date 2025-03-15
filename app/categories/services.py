@@ -16,9 +16,22 @@ class CategoryServices:
             session.add(new_category)
             await session.commit()
             return new_category
-        except IntegrityError:
+        except IntegrityError as e:
             await session.rollback()
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Category already exists")
+            if "1062" in str(e.orig):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={
+                        "error": "IntegrityError",
+                        "message": "The category name {new_category.name} already exists",
+                        "hint": "Please choose a different name"
+                    }
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Database integrity constraint failed. Please check your input and try again."
+                )
 
     async def category_item(self, category_id: str, session: AsyncSession):
         statement = select(Category).where(Category.id == uuid.UUID(category_id))
