@@ -3,7 +3,8 @@ from sqlmodel import select, desc
 from sqlalchemy.exc import IntegrityError
 from app.db.models import Category
 from app.categories.schemas import CategoryCreateModel
-from fastapi import HTTPException, status
+from app.error.error_handler import DataBaseErrorHandler
+
 import uuid
 
 
@@ -17,21 +18,8 @@ class CategoryServices:
             await session.commit()
             return new_category
         except IntegrityError as e:
-            await session.rollback()
-            if "1062" in str(e.orig):
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail={
-                        "error": "IntegrityError",
-                        "message": "The category name {new_category.name} already exists",
-                        "hint": "Please choose a different name"
-                    }
-                )
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Database integrity constraint failed. Please check your input and try again."
-                )
+            await DataBaseErrorHandler.handler_integrity_error(e, session, "category")
+
 
     async def category_item(self, category_id: str, session: AsyncSession):
         statement = select(Category).where(Category.id == uuid.UUID(category_id))
@@ -46,7 +34,7 @@ class CategoryServices:
         return categories
 
 
-    async def update_category(self, category_id: str, update_data: CategoryCreateModel, session: AsyncSession):
+    async def update_category(self, category_id: str, update_data: CategoryCreateModel, user_id: str, session: AsyncSession):
         category_to_update = await self.category_item(category_id, session)
 
         if category_to_update is not None:
@@ -55,8 +43,12 @@ class CategoryServices:
             for k, v in update_data_dict.items():
                 setattr(category_to_update, k, v)
 
-            await session.commit()
-            return category_to_update
+            category_to_update.user_id = uuid.UUID(user_id)
+            try:
+                await session.commit()
+                return category_to_update
+            except IntegrityError as e:
+               await DataBaseErrorHandler.handler_integrity_error(e, session, "category")
         else:
             return None
 

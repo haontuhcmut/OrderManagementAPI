@@ -1,11 +1,12 @@
 import uuid
+from typing import Annotated
 
 from app.product.schemas import ProductCreateModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from app.db.models import Product
 from sqlmodel import select, desc
 from sqlalchemy.exc import IntegrityError
-from fastapi import HTTPException, status
+from app.error.error_handler import DataBaseErrorHandler
 
 
 class ProductServices:
@@ -33,27 +34,40 @@ class ProductServices:
             await session.commit()
             return new_product
         except IntegrityError as e:
-            await session.rollback()
-            if "1062" in str(e.orig):
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail={
-                        "error": "IntegrityError",
-                        "message": f"The product name {new_product.name} already exists.",
-                        "hint": "Please choose a different name",
-                    }
-                )
-            if "1452" in str(e.orig):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail={
-                        "error": "IntegrityError",
-                        "message": f"The selected category does not exists.",
-                        "hint": "Please check and try again."
-                    }
-                )
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Database integrity constraint failed. Please check your input and try again.",
-                )
+            await DataBaseErrorHandler.handler_integrity_error(
+                e, session, "product"
+            )  # The use error module was customized
+
+    async def update_product(
+        self,
+        product_item: str,
+        update_data: ProductCreateModel,
+        user_id: str,
+        session: AsyncSession,
+    ):
+        product_to_update = await self.get_product_item(product_item, session)
+
+        if product_to_update is not None:
+            update_data_dict = product_to_update.model_dump()
+
+            for k, v in update_data_dict.item():
+                setattr(product_to_update, k, v)
+            product_to_update.user_id = uuid.UUID(user_id)
+            try:
+                await session.commit()
+                return product_to_update
+            except IntegrityError as e:
+                await DataBaseErrorHandler.handler_integrity_error(e, session, "product")
+        else:
+            return None
+
+    async def delete_product(self, product_item: str, session: AsyncSession):
+        product_to_delete = await self.get_product_item(product_item, session)
+
+        if product_to_delete is not None:
+            await session.delete(product_to_delete)
+            await session.commit()
+
+            return product_to_delete
+        else:
+            return None

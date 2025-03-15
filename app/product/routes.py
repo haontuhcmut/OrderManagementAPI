@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.exc import IntegrityError
 
 from app.db.models import Product
 from app.auth.dependencies import SessionDep, RoleChecker, AccessTokenBearer
 from typing import Annotated
 from app.product.services import ProductServices
 from app.product.schemas import ProductCreateModel
+from app.error.custom_exceptions import NotFound
 
 
 access_token_bearer = AccessTokenBearer()
@@ -50,3 +50,26 @@ async def create_product(
     new_product = await product_services.create_product(product_data, user_id, session)
     return new_product
 
+
+@product_route.put(
+    "/update_product/{product_item}",
+    response_model=Product,
+    dependencies=[admin_role_checker],
+)
+async def update_product(
+    product_item: str,
+    product_data: ProductCreateModel,
+    token_data: Annotated[dict, Depends(access_token_bearer)],
+    session: SessionDep,
+):
+    user_id = token_data.get("user_id")
+    product_to_update = await product_services.update_product(
+        product_item, product_data, user_id, session
+    )
+    if product_to_update is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    return product_to_update
+
+# @product_route.delete("/delete_product/{product_item}", response_model=Product, dependencies=[admin_role_checker])
+# async def delete_product(product_item: str, session: SessionDep):
+#     product_to_delete = HTTPException(status_code=status.HTTP_404_NOT_FOUND)

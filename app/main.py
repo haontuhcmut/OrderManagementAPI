@@ -6,8 +6,8 @@ from app.categories.routes import categories_route
 from app.db.session import create_event, engine, AsyncSessionLocal
 from app.auth.schemas import AdminCreateModel
 from app.auth.services import AdminService
+from app.config import Config
 
-version = "v1"
 
 description = """
 A REST API for a Raw Material Sample web service.
@@ -18,7 +18,7 @@ This REST API is able to:
 - User can send result.
 """
 
-version_prefix = f"/api/{version}"
+version_prefix = Config.VERSION
 
 admin_service = AdminService()
 
@@ -39,21 +39,21 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Order Management",
     description=description,
-    version=version,
+    version=version_prefix,
     license_info={"name": "MIT License", "url": "https://opensource.org/license/mit"},
     contact={
         "name": "Hao Nguyen",
         "url": "https://github.com/haontuhcmut",
         "email": "nguyenminhhao1188@gmail.com",
     },
-    openapi_url=f"{version_prefix}/openapi.json",
-    docs_url=f"{version_prefix}/docs",
-    redoc_url=f"{version_prefix}/redoc",
+    openapi_url=f"/{version_prefix}/openapi.json",
+    docs_url=f"/{version_prefix}/docs",
+    redoc_url=f"/{version_prefix}/redoc",
     lifespan=lifespan,
 )
 
-app.include_router(oauth_route, prefix=f"{version_prefix}/auth", tags=["auth"])
-app.include_router(product_route, prefix=f"{version_prefix}/products", tags=["product"])
+app.include_router(oauth_route, prefix=f"/{version_prefix}/auth", tags=["auth"])
+app.include_router(product_route, prefix=f"/{version_prefix}/products", tags=["product"])
 app.include_router(
-    categories_route, prefix=f"{version_prefix}/category", tags=["category"]
+    categories_route, prefix=f"/{version_prefix}/category", tags=["category"]
 )

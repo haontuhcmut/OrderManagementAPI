@@ -60,13 +60,13 @@ async def get_category_item(
 async def update_category(
     category_id: str,
     category_data: CategoryCreateModel,
-    _: Annotated[dict, Depends(access_token_bearer)],
+    token_data: Annotated[dict, Depends(access_token_bearer)],
     session: SessionDep,
 ):
+    user_id = token_data.get("user_id")
     updated_category = await category_services.update_category(
-        category_id, category_data, session
+        category_id, category_data, user_id, session
     )
-
     if updated_category is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"

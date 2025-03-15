@@ -26,6 +26,7 @@ from app.auth.utils import (
 from app.config import Config
 from app.db.redis import add_sub_to_blocklist
 
+
 from typing import Annotated
 from datetime import timedelta, datetime, timezone
 from jinja2 import Environment, FileSystemLoader
@@ -60,7 +61,7 @@ async def create_user(user_data: CreateUser, session: SessionDep):
         )
     new_user = await user_services.create_user(user_data, session)
     token = encode_url_safe_token({"email": email})
-    link = f"http://{Config.DOMAIN}/verify/{token}"
+    link = f"http://{Config.DOMAIN}/{Config.VERSION}/auth/verify/{token}"
     template = env.get_template("verify-email.html")
     html_content = template.render(action_url=link, first_name=user_data.first_name)
     emails = [email]
@@ -170,7 +171,7 @@ async def password_reset_request(email_data: ForgotPasswordModel, session: Sessi
             status_code=status.HTTP_404_NOT_FOUND, detail="Error user not found"
         )
     token = encode_url_safe_token({"email": email})
-    link = f"http:{Config.DOMAIN}/password-reset-confirm/{token}"
+    link = f"http:{Config.DOMAIN}/{Config.VERSION}/auth/password-reset-confirm/{token}"
     template = env.get_template("password-reset.html")
     html_content = template.render(action_url=link, first_name=user.first_name)
     subject = "Forgot your password"
@@ -192,7 +193,7 @@ async def valid_reset_password(
     if new_password != confirm_new_password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password does match the confirmation password",
+            detail="New password does match the confirmation password. Let's check and try again, please.",
         )
     token_data = decode_url_safe_token(token)
     user_email = token_data.get("email")
@@ -224,6 +225,7 @@ async def upgrade_user(
     session: SessionDep,
     _: Annotated[dict, Depends(access_token_bearer)],
 ):
+    "Upgrade the user's role to admin."
     user = await admin_services.get_user(username_or_email, session)
     if user is None:
         raise HTTPException(

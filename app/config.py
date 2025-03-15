@@ -1,4 +1,3 @@
-from passlib.crypto.scrypt import backend
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 
@@ -22,6 +21,7 @@ class Settings(BaseSettings):
     EMAIL_AD: str
     USERNAME_AD: str
     PASSWORD_AD: str
+    VERSION: str
 
     model_config = SettingsConfigDict(env_file=env_path, extra="ignore")
 
