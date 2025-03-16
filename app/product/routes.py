@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from starlette.responses import JSONResponse
 
 from app.db.models import Product
 from app.auth.dependencies import SessionDep, RoleChecker, AccessTokenBearer
 from typing import Annotated
+
+from app.error.custom_exceptions import ProductNotFound
 from app.product.services import ProductServices
 from app.product.schemas import ProductCreateModel
-from app.error.custom_exceptions import NotFound
-
 
 access_token_bearer = AccessTokenBearer()
 admin_role_checker = Depends(RoleChecker(["admin"]))
@@ -34,9 +35,7 @@ async def get_product_item(
 ) -> dict:
     product = await product_services.get_product_item(product_item, session)
     if product is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Product not found"
-        )
+        raise ProductNotFound()
     return product
 
 
@@ -70,6 +69,14 @@ async def update_product(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     return product_to_update
 
-# @product_route.delete("/delete_product/{product_item}", response_model=Product, dependencies=[admin_role_checker])
-# async def delete_product(product_item: str, session: SessionDep):
-#     product_to_delete = HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+@product_route.delete("/delete_product/{product_item}", dependencies=[admin_role_checker])
+async def delete_product(product_item: str, session: SessionDep):
+    product_to_delete = await product_services.delete_product(product_item, session)
+    if product_to_delete is None:
+        raise ProductNotFound()
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "message": f"Product is deleted"
+        }
+    )

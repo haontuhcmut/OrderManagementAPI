@@ -25,7 +25,8 @@ from app.auth.utils import (
 )
 from app.config import Config
 from app.db.redis import add_sub_to_blocklist
-
+from app.error.custom_exceptions import EmailAlreadyExists, UsernameAlreadyExists, UserNotFound, InvalidCredentials, \
+    InvalidToken
 
 from typing import Annotated
 from datetime import timedelta, datetime, timezone
@@ -49,16 +50,11 @@ async def create_user(user_data: CreateUser, session: SessionDep):
     email = user_data.email
     email_exists = await user_services.user_exists(email, session)
     if email_exists == "email_exists":
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
-        )
+        raise EmailAlreadyExists()
     username = user_data.username
     username_exists = await user_services.user_exists(username, session)
     if username_exists == "username_exists":
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Username already registered. Please choose another username.",
-        )
+        raise UsernameAlreadyExists()
     new_user = await user_services.create_user(user_data, session)
     token = encode_url_safe_token({"email": email})
     link = f"http://{Config.DOMAIN}/{Config.VERSION}/auth/verify/{token}"
@@ -81,9 +77,7 @@ async def verify_user_account(token: str, session: SessionDep):
     if user_email:
         user = await user_services.get_user(user_email, session)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-            )
+            raise UserNotFound()
         await user_services.update_user(user, {"is_verified": True}, session)
         return JSONResponse(
             content={"message": "Account verified successfully"},
@@ -103,10 +97,7 @@ async def user_login(
         user_data.username, user_data.password, session
     )
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-        )
+        raise InvalidCredentials()
     access_token = create_access_token(
         data={
             "email": user.username,
@@ -155,11 +146,7 @@ async def get_new_access_token(
             expires_delta=timedelta(minutes=Config.ACCESS_TOKEN_EXPIRES_MINUTES),
         )
         return new_access_token
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    raise InvalidToken()
 
 
 @oauth_route.post("/forgot-password")
@@ -167,9 +154,7 @@ async def password_reset_request(email_data: ForgotPasswordModel, session: Sessi
     email = email_data.email
     user = await user_services.get_user(email, session)
     if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Error user not found"
-        )
+        raise UserNotFound()
     token = encode_url_safe_token({"email": email})
     link = f"http:{Config.DOMAIN}/{Config.VERSION}/auth/password-reset-confirm/{token}"
     template = env.get_template("password-reset.html")
@@ -200,9 +185,7 @@ async def valid_reset_password(
     if user_email:
         user = await user_services.get_user(user_email, session)
         if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Error user not found"
-            )
+            raise UserNotFound()
         hashed_password = get_hashed_password(new_password)
         await user_services.update_user(
             user, {"hashed_password": hashed_password}, session
@@ -225,12 +208,10 @@ async def upgrade_user(
     session: SessionDep,
     _: Annotated[dict, Depends(access_token_bearer)],
 ):
-    "Upgrade the user's role to admin."
+    """Upgrade the user's role to admin"""
     user = await admin_services.get_user(username_or_email, session)
     if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Error user not found"
-        )
+        raise UserNotFound()
     else:
         await admin_services.update_user(user, {"role": "admin"}, session)
         return JSONResponse(
@@ -247,7 +228,10 @@ async def delete_user(
     _: Annotated[dict, Depends(access_token_bearer)],
     session: SessionDep,
 ):
+    """Just use for testing environment"""
     user_to_delete = await admin_services.delete_user_account(
         username_or_email, session
     )
+    if user_to_delete is None:
+        raise UserNotFound()
     return {"message": "User is deleted", "user": user_to_delete}

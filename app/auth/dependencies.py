@@ -7,30 +7,25 @@ from app.db.redis import token_in_blocklist
 from app.auth.utils import decode_token
 from app.auth.services import UserService
 from app.db.models import User
-
+from app.error.custom_exceptions import InvalidToken, AccountNotVerified, InsufficientPermission
+from app.config import Config
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 user_services = UserService()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token") #Note: tokenUrl support to get token
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"/{Config.VERSION}/auth/token") #Note: tokenUrl support to get token
 
 
 class TokenBear:
-    def __init__(self):
-        self.credentials_exception = HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
 
     async def __call__(self, token: Annotated[str, Depends(oauth2_scheme)]):
         token_data = decode_token(token)
 
         if token_data is None:
-            raise self.credentials_exception
+            raise InvalidToken()
 
         if await token_in_blocklist(token_data["sub"]):
-            raise self.credentials_exception
+            raise InvalidToken()
 
         self.verify_token_data(token_data)
         return token_data
@@ -42,13 +37,13 @@ class TokenBear:
 class AccessTokenBearer(TokenBear):
     def verify_token_data(self, token_data: dict) -> None:
         if token_data and token_data["refresh"]:
-            raise self.credentials_exception
+            raise InvalidToken()
 
 
 class RefreshTokenBearer(TokenBear):
     def verify_token_data(self, token_data: dict) -> None:
         if token_data and not token_data["refresh"]:
-            raise self.credentials_exception
+            raise InvalidToken()
 
 
 async def get_current_user(
@@ -65,12 +60,7 @@ class RoleChecker:
 
     def __call__(self, current_user: Annotated[User, Depends(get_current_user)]) -> Any:
         if not current_user.is_verified:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
-            )
+            raise AccountNotVerified()
         if current_user.role in self.allowed_roles:
             return True
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="You don't have enough permission to perform this action",
-        )
+        raise InsufficientPermission()

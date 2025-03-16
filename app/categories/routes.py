@@ -1,13 +1,14 @@
 import uuid
 
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 
 from app.categories.schemas import CategoryCreateModel
 from app.auth.dependencies import RoleChecker, AccessTokenBearer, SessionDep
 from app.categories.services import CategoryServices
 from app.db.models import Category
+from app.error.custom_exceptions import CategoryNotFound
 
 access_token_bearer = AccessTokenBearer()
 admin_role_checker = Depends(RoleChecker(["admin"]))
@@ -48,9 +49,7 @@ async def get_category_item(
 ):
     category = await category_services.category_item(category_id, session)
     if category is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
-        )
+        raise CategoryNotFound()
     return category
 
 
@@ -68,16 +67,13 @@ async def update_category(
         category_id, category_data, user_id, session
     )
     if updated_category is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
-        )
+        raise CategoryNotFound()
     else:
         return updated_category
 
 
 @categories_route.delete(
     "/category-delete/{category_id}",
-    response_model=Category,
     dependencies=[admin_role_checker],
 )
 async def delete_category(
@@ -87,12 +83,10 @@ async def delete_category(
 ):
     category_to_delete = await category_services.delete_category(category_id, session)
     if category_to_delete is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
-        )
+        raise CategoryNotFound()
     return JSONResponse(
         content={
-            "message": f"Category with the name {category_to_delete.name} is deleted"
+            "message": f"Category is deleted"
         },
         status_code=status.HTTP_200_OK,
     )

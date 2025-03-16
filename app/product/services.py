@@ -36,7 +36,7 @@ class ProductServices:
         except IntegrityError as e:
             await DataBaseErrorHandler.handler_integrity_error(
                 e, session, "product"
-            )  # The use error module was customized
+            )  # The use error_handler module was customized
 
     async def update_product(
         self,

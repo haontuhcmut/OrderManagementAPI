@@ -7,6 +7,7 @@ from app.db.session import create_event, engine, AsyncSessionLocal
 from app.auth.schemas import AdminCreateModel
 from app.auth.services import AdminService
 from app.config import Config
+from app.error.custom_exceptions import register_all_errors
 
 
 description = """
@@ -51,6 +52,8 @@ app = FastAPI(
     redoc_url=f"/{version_prefix}/redoc",
     lifespan=lifespan,
 )
+
+register_all_errors(app)
 
 app.include_router(oauth_route, prefix=f"/{version_prefix}/auth", tags=["auth"])
 app.include_router(product_route, prefix=f"/{version_prefix}/products", tags=["product"])
