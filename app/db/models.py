@@ -1,10 +1,9 @@
 import uuid
 from datetime import datetime, timezone, timedelta, date
-from sqlmodel import SQLModel, Field, Column, Relationship, String
+from sqlmodel import SQLModel, Field, Column, Relationship, String, Numeric
 from typing import Optional
 
 class User(SQLModel, table=True):
-    __tablename__ = "users"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     email: str = Field(default=None, index=True, unique=True)
     username: str = Field(default=None, index=True, unique=True)
@@ -20,12 +19,9 @@ class User(SQLModel, table=True):
 
     # Relationship
     categories: list["Category"] = Relationship(back_populates="user")
-    results: list["Result"] = Relationship(back_populates="user")
-    purchase: list["Purchase"] = Relationship(back_populates="user")
     products: list["Product"] = Relationship(back_populates="user")
 
 class Category(SQLModel, table=True):
-    __tablename__ = "categories"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(..., nullable=False, unique=True)
     user_id: uuid.UUID | None = Field(default=None, foreign_key="users.id")
@@ -34,54 +30,29 @@ class Category(SQLModel, table=True):
     products: list["Product"] = Relationship(back_populates="category")
 
 
-class ProductLinkPurchase(SQLModel, table=True):
+class Cart(SQLModel, table=True):
     product_id: uuid.UUID | None = Field(
         default=None, foreign_key="products.id", primary_key=True
     )
-    purchase_id: uuid.UUID | None = Field(
-        default=None, foreign_key="purchase.id", primary_key=True
+    user_id: uuid.UUID | None = Field(
+        default=None, foreign_key="users.id", primary_key=True
     )
+    quantity: int = Field(default=None, nullable=False)
 
 class Product(SQLModel, table=True):
-    __tablename__ = "products"
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    name: str = Field(default=None, unique=True, nullable=False)
-    category_id: uuid.UUID | None = Field(default=None, foreign_key="categories.id")
-    price: float = Field(default=None, nullable=False)
+    SKU: str = Field(default=None, unique=True, nullable=False)
     description: str = Field(default=None, max_length=1024)
+    price: float = Field(sa_column_kwargs={"type_": Numeric(10, 2)})
+    stock: int = Field(default=None)
+    category_id: uuid.UUID | None = Field(default=None, foreign_key="categories.id")
     created_at: date
     user_id: uuid.UUID | None = Field(default=None, foreign_key="users.id")
 
     category: Category | None = Relationship(back_populates="products")
-    results: list["Result"] = Relationship(back_populates="product")
-    purchase_ids: list["Purchase"] = Relationship(back_populates="product_ids", link_model=ProductLinkPurchase)
     user: User | None = Relationship(back_populates="products")
 
 
-class Purchase(SQLModel, table=True):
-    __tablename__ = "purchase"
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    user_id: uuid.UUID = Field(default=None, foreign_key="users.id")
-    quantity: int = Field(default=None)
-    amount: float = Field(default=None)
-    vat: float = Field(default=None)
-    total: float = Field(default=None)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    user: User | None = Relationship(back_populates="purchase")
-    product_ids: list["Product"] = Relationship(back_populates="purchase_ids", link_model=ProductLinkPurchase)
 
 
-class Result(SQLModel, table=True):
-    __tablename__ = "results"
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    product_id: uuid.UUID | None = Field(default=None, foreign_key="products.id")
-    user_id: uuid.UUID | None = Field(default=None, foreign_key="users.id")
-    result: float = Field(default=None)
-    unit: str = Field(default=None)
-    method: str = Field(default=None)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    user: User | None = Relationship(back_populates="results")
-    product: Product | None = Relationship(back_populates="results")
 
