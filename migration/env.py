@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from sqlmodel import SQLModel
-from app.db.models import User, Category, Product, Result, Purchase
+from app.db.models import User, Category, Product, CartItem, Cart
 from app.config import Config
 
 database_url = Config.DATABASE_URL
