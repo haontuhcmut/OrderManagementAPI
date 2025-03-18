@@ -1,12 +1,10 @@
-import uuid
-
 from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 
-from app.categories.schemas import CategoryCreateModel
+from app.category.schemas import CategoryCreateModel
 from app.auth.dependencies import RoleChecker, AccessTokenBearer, SessionDep
-from app.categories.services import CategoryServices
+from app.category.services import CategoryServices
 from app.db.models import Category
 from app.error.custom_exceptions import CategoryNotFound
 
@@ -15,10 +13,10 @@ admin_role_checker = Depends(RoleChecker(["admin"]))
 role_checker = Depends(RoleChecker(["admin", "user"]))
 category_services = CategoryServices()
 
-categories_route = APIRouter()
+category_route = APIRouter()
 
 
-@categories_route.post("/", response_model=Category, dependencies=[admin_role_checker])
+@category_route.post("/", response_model=Category, dependencies=[admin_role_checker])
 async def create_category(
     category_data: CategoryCreateModel,
     token_data: Annotated[dict, Depends(access_token_bearer)],
@@ -31,7 +29,7 @@ async def create_category(
     return new_category
 
 
-@categories_route.get("/", response_model=list[Category], dependencies=[role_checker])
+@category_route.get("/", response_model=list[Category], dependencies=[role_checker])
 async def get_all_categories(
     session: SessionDep, _: Annotated[dict, Depends(access_token_bearer)]
 ):
@@ -39,7 +37,7 @@ async def get_all_categories(
     return categories
 
 
-@categories_route.get(
+@category_route.get(
     "/{category_id}", response_model=Category, dependencies=[role_checker]
 )
 async def get_category_item(
@@ -53,7 +51,7 @@ async def get_category_item(
     return category
 
 
-@categories_route.put(
+@category_route.put(
     "/{category_id}", response_model=Category, dependencies=[admin_role_checker]
 )
 async def update_category(
@@ -72,7 +70,7 @@ async def update_category(
         return updated_category
 
 
-@categories_route.delete(
+@category_route.delete(
     "/category-delete/{category_id}",
     dependencies=[admin_role_checker],
 )

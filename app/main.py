@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.auth.routes import oauth_route
 from app.product.routes import product_route
-from app.categories.routes import categories_route
+from app.category.routes import category_route
 from app.db.session import create_event, engine, AsyncSessionLocal
 from app.auth.schemas import AdminCreateModel
 from app.auth.services import AdminService
@@ -15,7 +15,7 @@ A REST API for a Raw Material Sample web service.
 
 This REST API is able to:
 - Create user validation using OAuth2 standard.
-- Create CRUD product, categories,...
+- Create CRUD product, category,...
 - User can send result.
 """
 
@@ -58,5 +58,5 @@ register_all_errors(app)
 app.include_router(oauth_route, prefix=f"/{version_prefix}/auth", tags=["auth"])
 app.include_router(product_route, prefix=f"/{version_prefix}/products", tags=["product"])
 app.include_router(
-    categories_route, prefix=f"/{version_prefix}/category", tags=["category"]
+    category_route, prefix=f"/{version_prefix}/category", tags=["category"]
 )

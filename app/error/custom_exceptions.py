@@ -166,3 +166,24 @@ def register_all_errors(app: FastAPI):
             }
         )
     )
+
+    # app.exception_handler(ValueError)
+    # async def custom_value_error_handler(request: Request, exc: ValueError):
+    #     error_message = str(exc).lower()
+    #
+    #     if "badly formed hexadecimal uuid string" in error_message:
+    #         return JSONResponse(
+    #             status_code=status.HTTP_400_BAD_REQUEST,
+    #             content={
+    #                 "message": "Invalid UUID format. Please provided a valid UUID",
+    #                 "error_code": "invalid_uuid_format"
+    #             }
+    #         )
+    #     return JSONResponse(
+    #         status_code=status.HTTP_400_BAD_REQUEST,
+    #         content={
+    #             "message": "Oops!. An unknown ValueError occurred.",
+    #             "detail": str(error_message),
+    #             "error_code": "value_error"
+    #         }
+    #     )

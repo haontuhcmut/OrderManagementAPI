@@ -2,8 +2,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, desc
 from sqlalchemy.exc import IntegrityError
 from app.db.models import Category
-from app.categories.schemas import CategoryCreateModel
+from app.category.schemas import CategoryCreateModel
 from app.error.error_handler import DataBaseErrorHandler
+from fastapi import HTTPException
 
 import uuid
 

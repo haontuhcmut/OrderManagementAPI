@@ -66,7 +66,7 @@ async def update_product(
         product_item, product_data, user_id, session
     )
     if product_to_update is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+        raise ProductNotFound()
     return product_to_update
 
 @product_route.delete("/delete_product/{product_item}", dependencies=[admin_role_checker])

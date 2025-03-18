@@ -1,8 +1,11 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 import re
+
+
 
 class DataBaseErrorHandler:
     @staticmethod #Do not create instance
