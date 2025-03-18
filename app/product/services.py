@@ -50,7 +50,7 @@ class ProductServices:
         if product_to_update is not None:
             update_data_dict = product_to_update.model_dump()
 
-            for k, v in update_data_dict.item():
+            for k, v in update_data_dict.items():
                 setattr(product_to_update, k, v)
             product_to_update.user_id = uuid.UUID(user_id)
             try:
